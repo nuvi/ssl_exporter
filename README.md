@@ -1,7 +1,11 @@
 ### SSL Exporter
 
-:9197/metrics example...
+Will get expiration of SSL certificates in Epoch time to be scraped by Prometheus
 
+hit :9197/probe to fire off metric gathering, control of this can be done with scrape_interval on Prometheus server to prevent unnecessarily hitting monitored websites
+
+
+:9197/metrics example output
 
 ```# HELP ssl_expiration SSL certificate name and Expiration
 # TYPE ssl_expiration gauge
