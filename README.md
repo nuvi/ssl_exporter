@@ -2,7 +2,7 @@
 
 Will get expiration of SSL certificates in Epoch time to be scraped by Prometheus, configured with a yaml file, see configs directory for example.
 
-####:9197/metrics example output
+### :9197/metrics example output
 
 ```# HELP ssl_expiration SSL certificate name and Expiration
 # TYPE ssl_expiration gauge
@@ -13,7 +13,7 @@ ssl_scrape_up{domain="https://asdfasdfasdfassdfasdf.com"} 0
 ssl_scrape_up{domain="https://google.com"} 1
 ```
 
-####Environment Variables
+### Environment Variables
 ```
 	Debug         default false
 	ListenAddress default :9197
@@ -22,7 +22,7 @@ ssl_scrape_up{domain="https://google.com"} 1
 
 ```
 
-#### Prometheus Alert rule, if cert is set to expire in 30 days
+### Prometheus Alert rule, if cert is set to expire in 30 days
 ```
 ssl_expiration - time() < 86400 * 30
 ```
