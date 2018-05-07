@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"time"
 
 	"github.com/kelseyhightower/envconfig"
 	"github.com/prometheus/common/log"
@@ -43,13 +44,12 @@ type Specification struct {
 	Debug         bool   `default:"false"`
 	ListenAddress string `default:":9197"`
 	MetricsPath   string `default:"/metrics"`
-	ProbePath     string `default:"/probe"`
-	ConfigPath    string `default:"/etc/prometheus/exporters/ssl_exporter/"`
+	//ProbePath     string `default:"/probe"`
+	ConfigPath string `default:"/etc/prometheus/exporters/ssl_exporter/"`
 }
 
 // LoadConfig - Read in Config file.
 func (s *Specification) LoadConfig() Config {
-	//files, err := ioutil.ReadDir("./configs/")
 	fmt.Println(s.ConfigPath)
 	files, err := ioutil.ReadDir(s.ConfigPath)
 	if err != nil {
@@ -96,19 +96,19 @@ func contains(certs []*x509.Certificate, cert *x509.Certificate) bool {
 	return false
 }
 
-func probeHandler(w http.ResponseWriter, r *http.Request, cfg Config) {
-	// time.Sleep(15 * time.Second)
-	domains := cfg.Targets
-	for _, domain := range domains {
-		x := sslStats(domain)
-		if x == 0.0 {
-			up.With(prometheus.Labels{"domain": domain}).Set(0)
-		} else {
-			sslMetric.With(prometheus.Labels{"domain": domain}).Set(x)
-			up.With(prometheus.Labels{"domain": domain}).Set(1)
-		}
-	}
-}
+// func probeHandler(w http.ResponseWriter, r *http.Request, cfg Config) {
+// 	// time.Sleep(15 * time.Second)
+// 	domains := cfg.Targets
+// 	for _, domain := range domains {
+// 		x := sslStats(domain)
+// 		if x == 0.0 {
+// 			up.With(prometheus.Labels{"domain": domain}).Set(0)
+// 		} else {
+// 			sslMetric.With(prometheus.Labels{"domain": domain}).Set(x)
+// 			up.With(prometheus.Labels{"domain": domain}).Set(1)
+// 		}
+// 	}
+// }
 
 func sslStats(target string) (expires float64) {
 
@@ -160,14 +160,29 @@ func main() {
 	log.Info("Metrics Path: %s\n", s.MetricsPath)
 	handler := promhttp.Handler()
 
+	go func() {
+		domains := cfg.Targets
+		for _, domain := range domains {
+			x := sslStats(domain)
+			if x == 0.0 {
+				up.With(prometheus.Labels{"domain": domain}).Set(0)
+			} else {
+				sslMetric.With(prometheus.Labels{"domain": domain}).Set(x)
+				up.With(prometheus.Labels{"domain": domain}).Set(1)
+			}
+			//only need to gather stats twice per day
+		}
+		time.Sleep(43200 * time.Second)
+	}()
+
 	if s.MetricsPath == "" || s.MetricsPath == "/" {
 		http.Handle(s.MetricsPath, handler)
 	} else {
-		http.Handle(s.MetricsPath, prometheus.Handler())
 		//only gather stats when /probe is hit
-		http.HandleFunc(s.ProbePath, func(w http.ResponseWriter, r *http.Request) {
-			probeHandler(w, r, cfg)
-		})
+		http.Handle(s.MetricsPath, prometheus.Handler())
+		// http.HandleFunc(s.ProbePath, func(w http.ResponseWriter, r *http.Request) {
+		// 	probeHandler(w, r, cfg)
+		// })
 		http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 			w.Write([]byte(`<html>
 				<head><title>Prometheus SSL Exporter</title></head>
